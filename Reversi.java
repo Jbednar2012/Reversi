@@ -1,12 +1,41 @@
-import java.util.Random;
 import java.util.Scanner;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+
+import javax.imageio.ImageIO;
+import javax.swing.JFrame;
+import javax.swing.JPanel;
 
 enum Stan {EMPTY, BLACK, WHITE}
 enum Winner {NOT_YET, DRAW, BLACK, WHITE}
 
-class Field {
+class Field extends JPanel{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	Stan turn;
 	Stan[][] plansza = new Stan[8][8];
-	Field(){
+	private BufferedImage blackImage, whiteImage, emptyImage, thisImage;
+	
+	public Field(){
+		super("Reversi");
+		File black = new File("black.png");
+		File white = new File("white.png");
+		File empty = new File("empty.png");
+		try {
+				blackImage = ImageIO.read(black);
+				whiteImage = ImageIO.read(white);
+				emptyImage = ImageIO.read(empty);
+		} catch (IOException e) {
+			System.err.println("Blad odczytu obrazka");
+			e.printStackTrace();
+		}
+
+		Dimension dimension = new Dimension(240, 240);
+		setPreferredSize(dimension);
 		for(int i=0;i<8;i++)
 			for(int j=0;j<8;j++){
 				if(i==3&&j==3||i==4&&j==4)
@@ -17,24 +46,20 @@ class Field {
 			}
 	}
 	
-	void printField()
+	public void paint(Graphics g)
 	{
-		String row = "";
-		System.out.println(" X  1 2 3 4 5 6 7 8\nY -------------------");
-		for(int i=0;i<8;i++){
-			char id = (char)(i+'0'+1);
-			row = id+" | ";
-			for(int j=0;j<8;j++)
-				switch(plansza[i][j]){
-					case EMPTY: row+="  "; break;
-					case BLACK: row+="X "; break;
-					case WHITE: row+="O "; break;
-					default: row+="E "; break;
-				}
-			row+="|";
-			System.out.println(row);
-		}
-		System.out.println("  -------------------");
+		if(turn==Stan.BLACK) add(new JLabel("BLACK"));
+		else if(turn==Stan.WHITE) add(new JLabel("WHITE"));
+		Graphics2D g2d = (Graphics2D) g;
+		for(int i=0;i<8;i++)
+			for(int j=0;j<8;j++){
+				if(plansza[i][j]==Stan.BLACK)
+					thisImage = blackImage;
+				else if (plansza[i][j]==Stan.WHITE)
+					thisImage = whiteImage;
+				else thisImage = emptyImage;
+				g2d.drawImage(thisImage, 30*i, 20+30*j, this);
+			}
 	}
 }
 
@@ -42,6 +67,7 @@ class Game{
 	Winner win;
 	Stan kolejka;
 	int immobilityBlocker;
+	Scanner wspolrzedne = new Scanner(System.in);
 	Game(){
 		win = Winner.NOT_YET;
 		immobilityBlocker = 0;
@@ -155,6 +181,7 @@ class Game{
 	void replace(Field field, Stan turn, Stan opponent, int x, int y, boolean[] directions)
 	{
 		int i, j;
+		boolean[] neighborDirections = new boolean[8];
 		if(directions[0]){
 			i=x+1;
 			j=y;
@@ -208,7 +235,7 @@ class Game{
 			j=y-1;
 			do{
 				field.plansza[i][j]=turn;
-				j--;
+				j--;;
 			}while(field.plansza[i][j]==opponent);
 		}
 		if(directions[7])
@@ -248,7 +275,6 @@ class Game{
 			immobilityBlocker = 0;
 			boolean move_possible = false;
 			while(!move_possible){
-				Scanner wspolrzedne = new Scanner(System.in);
 				System.out.println("Gdzie chcesz zamiescic swoj pionek?");
 				System.out.print("X: ");
 				y = wspolrzedne.nextInt();
@@ -323,7 +349,7 @@ class Game{
 		else return Winner.DRAW;
 	}
 
-	boolean Settled(Field field)
+	boolean Settled(Field field, JFrame frame)
 	{
 		String victor = "";
 		if(fullyFilled(field)||immobilityBlocker>1){
@@ -343,43 +369,57 @@ class Game{
 			}
 		}
 		System.out.println(victor);
+		wspolrzedne.close();
 		return true;
 	}
 }
 
 class Gameplay
 {
-	void hotSeat(Field field, Game game)
+	void hotSeat(Field field, Game game, JFrame frame)
 	{
-		field.printField();
 		game.kolejka = Stan.BLACK;
+		field.turn = Stan.BLACK;
+	    frame.setVisible(true);
 		do{
 			if(game.kolejka==Stan.BLACK){
 				System.out.println("\nCZARNY\n");
 				game.myTurn(field,game.kolejka,Stan.WHITE);
 				game.kolejka = Stan.WHITE;
+				field.turn = Stan.WHITE;
 			}
 			else if(game.kolejka==Stan.WHITE){
 				System.out.println("\nBIA£Y\n");
 				game.myTurn(field,game.kolejka,Stan.BLACK);
 				game.kolejka = Stan.BLACK;
+				field.turn = Stan.BLACK;
 			}
-			field.printField();
-		}while(!game.Settled(field));
+			field.repaint();
+		}while(!game.Settled(field,frame));
+		frame.setVisible(false);
 		System.gc();
+		
 	}
 	
-	void serverPlay(Field field, Game game)
+	void serverPlay(Field field, Game game, JFrame frame)
 	{
+	    frame.setVisible(true);
 		System.out.println("Coming soon");
+		frame.setVisible(false);
 		System.gc();
 	}
 }
 
-public class Reversi{
+public class Reversi {
 	static Field pole = new Field();
 	static Game gra = new Game();
 	static Gameplay rozgrywka = new Gameplay();
+	
+	static void initFrame(JFrame frame) {
+		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+	    frame.setBounds(10,10, 256, 300);
+	    frame.add(pole);
+	}
 	
 	public static void main(String[] args){
 		int choice;
@@ -390,9 +430,15 @@ public class Reversi{
 			System.out.println("Nie ma takiej opcji\nSpróbuj ponownie");
 			choice = begin.nextInt();
 		}
-		if(choice == 1)
-			rozgrywka.hotSeat(pole, gra);
-		else
-			rozgrywka.serverPlay(pole, gra);
+		JFrame f = new JFrame();
+		if(choice == 1) {
+			initFrame(f);
+			rozgrywka.hotSeat(pole, gra, f);
+		}
+		else {
+			initFrame(f);
+			rozgrywka.serverPlay(pole, gra, f);
+		}
+		begin.close();
 	}
 }
