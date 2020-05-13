@@ -1,6 +1,8 @@
 import java.util.Scanner;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.awt.event.*;
+
 import java.io.File;
 import java.io.IOException;
 
@@ -11,17 +13,23 @@ import javax.swing.JPanel;
 enum Stan {EMPTY, BLACK, WHITE}
 enum Winner {NOT_YET, DRAW, BLACK, WHITE}
 
-class Field extends JPanel{
+class Field extends JPanel implements MouseListener, MouseMotionListener{
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
-	Stan turn;
+	Stan turn, opponent;
+	public String infoOGrze;
+	Winner win;
+	JFrame frame;
+	int immobilityBlocker;
+	Scanner wspolrzedne = new Scanner(System.in);
 	Stan[][] plansza = new Stan[8][8];
 	private BufferedImage blackImage, whiteImage, emptyImage, thisImage;
 	
-	public Field(){
-		super("Reversi");
+	public Field(JFrame frame){
+		super();
+		this.frame = frame;
 		File black = new File("black.png");
 		File white = new File("white.png");
 		File empty = new File("empty.png");
@@ -34,23 +42,28 @@ class Field extends JPanel{
 			e.printStackTrace();
 		}
 
-		Dimension dimension = new Dimension(240, 240);
+		Dimension dimension = new Dimension(240, 260);
 		setPreferredSize(dimension);
-		for(int i=0;i<8;i++)
-			for(int j=0;j<8;j++){
+		for(int j=0;j<8;j++)
+			for(int i=0;i<8;i++){
 				if(i==3&&j==3||i==4&&j==4)
 					plansza[i][j] = Stan.BLACK;
 				else if(i==3&&j==4||i==4&&j==3)
 					plansza[i][j] = Stan.WHITE;
 				else plansza[i][j] = Stan.EMPTY;
 			}
+		win = Winner.NOT_YET;
+		immobilityBlocker = 0;
+		addMouseListener(this);
+		addMouseMotionListener(this);
 	}
 	
 	public void paint(Graphics g)
 	{
-		if(turn==Stan.BLACK) add(new JLabel("BLACK"));
-		else if(turn==Stan.WHITE) add(new JLabel("WHITE"));
+		g.clearRect(0,0,240,260);
 		Graphics2D g2d = (Graphics2D) g;
+		g2d.setBackground(Color.GREEN);
+		g2d.drawString(infoOGrze,0,19);
 		for(int i=0;i<8;i++)
 			for(int j=0;j<8;j++){
 				if(plansza[i][j]==Stan.BLACK)
@@ -61,27 +74,16 @@ class Field extends JPanel{
 				g2d.drawImage(thisImage, 30*i, 20+30*j, this);
 			}
 	}
-}
-
-class Game{
-	Winner win;
-	Stan kolejka;
-	int immobilityBlocker;
-	Scanner wspolrzedne = new Scanner(System.in);
-	Game(){
-		win = Winner.NOT_YET;
-		immobilityBlocker = 0;
-	}
 	
-	boolean replacePossible(Field field, Stan turn, Stan opponent, int x, int y, boolean[] directions)
+	boolean replacePossible(Stan turn, Stan opponent, int x, int y, boolean[] directions)
 	{
-		if(field.plansza[x][y]!=Stan.EMPTY) return false;
+		if(plansza[x][y]!=Stan.EMPTY) return false;
 		int i, j, possibility=0;
 		check_right:	for(i=x+1;i<8;i++){
 							j=y;
-							if(field.plansza[i][j]==opponent)
+							if(plansza[i][j]==opponent)
 								continue check_right;
-							else if(field.plansza[i][j]==turn&&field.plansza[i-1][j]==opponent){
+							else if(plansza[i][j]==turn&&plansza[i-1][j]==opponent){
 								possibility+=1;
 								directions[0] = true;
 								break check_right;
@@ -91,10 +93,10 @@ class Game{
 		check_right_down:	for(i=x+1;i<8;i++){
 								j=y+(i-x);
 								if(j<8)
-									if(field.plansza[i][j]==opponent){
+									if(plansza[i][j]==opponent){
 										continue check_right_down;
 									}
-									else if(field.plansza[i][j]==turn&&field.plansza[i-1][j-1]==opponent){
+									else if(plansza[i][j]==turn&&plansza[i-1][j-1]==opponent){
 										possibility+=1;
 										directions[1] = true;
 										break check_right_down;
@@ -103,9 +105,9 @@ class Game{
 		}
 		check_down:	for(j=y+1;j<8;j++){
 						i=x;
-						if(field.plansza[i][j]==opponent)
+						if(plansza[i][j]==opponent)
 							continue check_down;
-						else if(field.plansza[i][j]==turn&&field.plansza[i][j-1]==opponent){
+						else if(plansza[i][j]==turn&&plansza[i][j-1]==opponent){
 							possibility+=1;
 							directions[2] = true;
 							break check_down;
@@ -115,10 +117,10 @@ class Game{
 		check_left_down:	for(i=x-1;i>=0;i--){
 								j=y+(x-i);
 								if(j<8)
-									if(field.plansza[i][j]==opponent){
+									if(plansza[i][j]==opponent){
 										continue check_left_down;
 									}
-									else if(field.plansza[i][j]==turn&&field.plansza[i+1][j-1]==opponent){
+									else if(plansza[i][j]==turn&&plansza[i+1][j-1]==opponent){
 										possibility+=1;
 										directions[3] = true;
 										break check_left_down;
@@ -127,9 +129,9 @@ class Game{
 		}
 		check_left: for(i=x-1;i>=0;i--){
 						j=y;
-						if(field.plansza[i][j]==opponent)
+						if(plansza[i][j]==opponent)
 							continue check_left;
-						else if(field.plansza[i][j]==turn&&field.plansza[i+1][j]==opponent){
+						else if(plansza[i][j]==turn&&plansza[i+1][j]==opponent){
 							possibility+=1;
 							directions[4] = true;
 							break check_left;
@@ -139,10 +141,10 @@ class Game{
 		check_left_up: 	for(i=x-1;i>=0;i--){
 							j=y-(x-i);
 							if(j>=0)
-								if(field.plansza[i][j]==opponent){
+								if(plansza[i][j]==opponent){
 									continue check_left_up;
 								}
-							else if(field.plansza[i][j]==turn&&field.plansza[i+1][j+1]==opponent){
+							else if(plansza[i][j]==turn&&plansza[i+1][j+1]==opponent){
 								possibility+=1;
 								directions[5] = true;
 								break check_left_up;
@@ -151,9 +153,9 @@ class Game{
 		}
 		check_up: 	for(j=y-1;j>=0;j--){
 						i=x;
-						if(field.plansza[i][j]==opponent)
+						if(plansza[i][j]==opponent)
 							continue check_up;
-						else if(field.plansza[i][j]==turn&&field.plansza[i][j+1]==opponent){
+						else if(plansza[i][j]==turn&&plansza[i][j+1]==opponent){
 							possibility+=1;
 							directions[6] = true;
 							break check_up;
@@ -163,99 +165,97 @@ class Game{
 		check_right_up: for(i=x+1;i<8;i++){
 							j=y-(i-x);
 							if(j>=0)
-							if(field.plansza[i][j]==opponent){
+							if(plansza[i][j]==opponent){
 								continue check_right_up;
 							}
-							else if(field.plansza[i][j]==turn&&field.plansza[i-1][j+1]==opponent){
+							else if(plansza[i][j]==turn&&plansza[i-1][j+1]==opponent){
 								possibility+=1;
 								directions[7] = true;
 								break check_right_up;
 							}
 							else break check_right_up;
 		}
-		//System.out.println("Liczba mo¿liwosci dla punktu <"+(x+1)+", "+(y+1)+">: "+possibility);
 		if(possibility>0) return true;
 		else return false;
 	}
 	
-	void replace(Field field, Stan turn, Stan opponent, int x, int y, boolean[] directions)
+	void replace(Stan turn, Stan opponent, int x, int y, boolean[] directions)
 	{
 		int i, j;
-		boolean[] neighborDirections = new boolean[8];
 		if(directions[0]){
 			i=x+1;
 			j=y;
 			do{
-				field.plansza[i][j]=turn;
+				plansza[i][j]=turn;
 				i++;
-			}while(field.plansza[i][j]==opponent);
+			}while(plansza[i][j]==opponent);
 		}
 		if(directions[1]){
 			i=x+1;
 			j=y+1;
 			do{
-				field.plansza[i][j]=turn;
+				plansza[i][j]=turn;
 				i++; j++;
-			}while(field.plansza[i][j]==opponent);
+			}while(plansza[i][j]==opponent);
 		}
 		if(directions[2]){
 			i=x;
 			j=y+1;
 			do{
-				field.plansza[i][j]=turn;
+				plansza[i][j]=turn;
 				j++;
-			}while(field.plansza[i][j]==opponent);
+			}while(plansza[i][j]==opponent);
 		}
 		if(directions[3]){
 			i=x-1;
 			j=y+1;
 			do{
-				field.plansza[i][j]=turn;
+				plansza[i][j]=turn;
 				i--; j++;
-			}while(field.plansza[i][j]==opponent);
+			}while(plansza[i][j]==opponent);
 		}
 		if(directions[4]){
 			i=x-1;
 			j=y;
 			do{
-				field.plansza[i][j]=turn;
+				plansza[i][j]=turn;
 				i--;
-			}while(field.plansza[i][j]==opponent);
+			}while(plansza[i][j]==opponent);
 		}
 		if(directions[5]){
 			i=x-1;
 			j=y-1;
 			do{
-				field.plansza[i][j]=turn;
+				plansza[i][j]=turn;
 				i--; j--;
-			}while(field.plansza[i][j]==opponent);
+			}while(plansza[i][j]==opponent);
 		}
 		if(directions[6]){
 			i=x;
 			j=y-1;
 			do{
-				field.plansza[i][j]=turn;
+				plansza[i][j]=turn;
 				j--;;
-			}while(field.plansza[i][j]==opponent);
+			}while(plansza[i][j]==opponent);
 		}
 		if(directions[7])
 		{
 			i=x+1;
 			j=y-1;
 			do{
-				field.plansza[i][j]=turn;
+				plansza[i][j]=turn;
 				i++; j--;
-			}while(field.plansza[i][j]==opponent);
+			}while(plansza[i][j]==opponent);
 		}
 	}
 	
-	boolean canIMove(Field field, Stan turn, Stan opponent)
+	boolean canIMove(Stan turn, Stan opponent)
 	{
 		boolean[] checker = new boolean[8];
 		int possibilities = 0;
 		for(int i=0;i<8;i++)
 			for(int j=0; j<8; j++)
-				if(replacePossible(field,turn,opponent,i,j,checker))
+				if(replacePossible(turn,opponent,i,j,checker))
 					possibilities++;
 		if(possibilities>0) return true;
 		else return false;
@@ -267,158 +267,183 @@ class Game{
 		else return false;
 	}
 	
-	void myTurn(Field field, Stan turn, Stan opponent)
-	{
-		if(turn==opponent) System.out.println("Nie mo¿esz sam siebie zaatakowaæ!");
-		if(canIMove(field,turn,opponent)){
-			int x, y;
-			immobilityBlocker = 0;
-			boolean move_possible = false;
-			while(!move_possible){
-				System.out.println("Gdzie chcesz zamiescic swoj pionek?");
-				System.out.print("X: ");
-				y = wspolrzedne.nextInt();
-				while(y<1||y>8){
-					System.out.println("Liczba musi miescic sie w przedziale od 1 do 10!");
-					y = wspolrzedne.nextInt();
-				}
-				System.out.print("Y: ");
-				x = wspolrzedne.nextInt();
-				while(x<1||x>8){
-					System.out.println("Liczba musi miescic sie w przedziale od 1 do 10!");
-					x = wspolrzedne.nextInt();
-				}
-				x--; y--;
-				if(field.plansza[x][y]==Stan.EMPTY){
-					boolean[] directions = new boolean[8];
-					if(replacePossible(field,turn,opponent,x,y,directions)){
-						move_possible = true;
-						field.plansza[x][y] = turn;
-						replace(field,turn,opponent,x,y,directions);;
-					}
-					else System.out.println("Ten ruch nie jest mo¿liwy!");
-				}
-				else
-					System.out.println("Miejsce zajête!");
-				}
-			}
-			else
-			{
-				System.out.println("Brak mo¿liwych ruchów!");
-				immobilityBlocker++;
-			}
-		System.out.print(System.lineSeparator());
-	}
-	
-	boolean fullyFilled(Field field)
+	boolean fullyFilled()
 	{
 		for(int i=0;i<8;i++){
 			for(int j=0;j<8;j++)
-				if(field.plansza[i][j]==Stan.EMPTY) return false;
+				if(plansza[i][j]==Stan.EMPTY) return false;
 		}
 		return true;
 	}
 	
-	Winner whoIsEliminated(Field field)
+	Winner whoIsEliminated()
 	{
 		int black_counter = 0, white_counter = 0;
 		for(int i=0;i<8;i++){
 			for(int j=0;j<8;j++)
-				switch(field.plansza[i][j]){
+				switch(plansza[i][j]){
 					case BLACK: black_counter++; break;
 					case WHITE: white_counter++; break;
+					case EMPTY: ;
 				}
 		}
-		if(black_counter==0) return Winner.BLACK;
-		if(white_counter==0) return Winner.WHITE;
+		if(black_counter==0) {
+			infoOGrze = "Eliminacja - ";
+			return Winner.BLACK;
+		}
+		if(white_counter==0) {
+			infoOGrze = "Eliminacja - ";
+			return Winner.WHITE;
+		}
 		return Winner.NOT_YET;
 	}
 	
-	Winner checkWhoPrevailed(Field field){
+	Winner checkWhoPrevailed(){
 		int black_counter = 0, white_counter = 0;
 		for(int i=0;i<8;i++){
 			for(int j=0;j<8;j++)
-				switch(field.plansza[i][j]){
+				switch(plansza[i][j]){
 					case BLACK: black_counter++; break;
 					case WHITE: white_counter++;
+					case EMPTY: ;
 				}
 		}
-		System.out.println("Czarne: "+black_counter+"\t\tBia³e: "+white_counter);
+		infoOGrze = "C: "+black_counter+"  B: "+white_counter+" - ";
 		if(black_counter>white_counter) return Winner.BLACK;
 		else if(black_counter<white_counter) return Winner.WHITE;
 		else return Winner.DRAW;
 	}
 
-	boolean Settled(Field field, JFrame frame)
+	boolean Settled()
 	{
-		String victor = "";
-		if(fullyFilled(field)||immobilityBlocker>1){
-			win = checkWhoPrevailed(field);
+		if(fullyFilled()||immobilityBlocker>1){
+			win = checkWhoPrevailed();
 			switch(win){
-				case BLACK: victor = "Czarny wygra³ przez przewagê liczebn¹ na wype³nionej planszy!"; break;
-				case WHITE: victor = "Bia³y wygra³ przez przewagê liczebn¹ na wype³nionej planszy!"; break;
-				case DRAW: victor = "Mamy remis!"; break;
-			}
-		}
-		else{
-			win = whoIsEliminated(field);
-			switch(win){
-				case BLACK: victor = "Bia³y wygra³ przez eliminacjê przeciwnika!"; break;
-				case WHITE: victor = "Czarny wygra³ przez eliminacjê przeciwnika!"; break;
+				case BLACK: infoOGrze += "CZARNY wygra³!"; break;
+				case WHITE: infoOGrze += "BIA£Y wygra³!"; break;
+				case DRAW: infoOGrze += "Mamy remis!"; break;
 				case NOT_YET: return false;
 			}
 		}
-		System.out.println(victor);
+		else{
+			win = whoIsEliminated();
+			switch(win){
+				case BLACK: infoOGrze = "Bia³y wygra³!"; break;
+				case WHITE: infoOGrze = "CZARNY wygra³!"; break;
+				case DRAW: infoOGrze = "Niemo¿liwe!"; break;
+				case NOT_YET: return false;
+			}
+		}
+		System.out.println(infoOGrze);
 		wspolrzedne.close();
 		return true;
 	}
-}
 
-class Gameplay
-{
-	void hotSeat(Field field, Game game, JFrame frame)
-	{
-		game.kolejka = Stan.BLACK;
-		field.turn = Stan.BLACK;
-	    frame.setVisible(true);
-		do{
-			if(game.kolejka==Stan.BLACK){
-				System.out.println("\nCZARNY\n");
-				game.myTurn(field,game.kolejka,Stan.WHITE);
-				game.kolejka = Stan.WHITE;
-				field.turn = Stan.WHITE;
+	@Override
+	public void mouseDragged(MouseEvent e) {
+	}
+
+	@Override
+	public void mouseMoved(MouseEvent e) {
+	}
+
+	@Override
+	public void mouseClicked(MouseEvent e) {
+	}
+
+	@Override
+	public void mouseEntered(MouseEvent e) {
+	}
+
+	@Override
+	public void mouseExited(MouseEvent e) {
+	}
+
+	@Override
+	public void mousePressed(MouseEvent e) {
+		String who = "X";
+		if(turn==Stan.BLACK) {
+			opponent = Stan.WHITE;
+			who = "CZARNY";
+		}
+		else if(turn==Stan.WHITE) {
+			opponent = Stan.BLACK;
+			who = "BIA£Y";
+		}
+		boolean movePossible = false;
+		if(canIMove(turn,opponent)){
+			int x, y;
+			immobilityBlocker = 0;
+			x = (int) e.getX();
+			y = (int) e.getY();
+			if(y>=20 && x<240 && y<260) {
+				x = Math.floorDiv(x, 30);
+				y = Math.floorDiv(y-20, 30);
+				if(plansza[x][y]==Stan.EMPTY){
+					boolean[] directions = new boolean[8];
+					if(replacePossible(turn,opponent,x,y,directions)){
+						movePossible = true;
+						plansza[x][y] = turn;
+						replace(turn,opponent,x,y,directions);
+					}
+					else {
+						infoOGrze = who + " - Ten ruch nie jest mo¿liwy!";
+						repaint();
+					}
+				}
+				else {
+					infoOGrze = who + " - Miejsce zajête!";
+					repaint();
+				}
 			}
-			else if(game.kolejka==Stan.WHITE){
-				System.out.println("\nBIA£Y\n");
-				game.myTurn(field,game.kolejka,Stan.BLACK);
-				game.kolejka = Stan.BLACK;
-				field.turn = Stan.BLACK;
+			else
+			{
+				infoOGrze = "Klikn¹³eœ poza planszê";
+				repaint();
 			}
-			field.repaint();
-		}while(!game.Settled(field,frame));
-		frame.setVisible(false);
-		System.gc();
+		}
+		else
+		{
+			infoOGrze = who + " - Brak mo¿liwych ruchów!";
+			immobilityBlocker++;
+		}
+		repaint();
+		if(movePossible) {
+			Stan tmp = turn;
+			turn = opponent;
+			opponent = tmp;
+			if(turn == Stan.BLACK)
+				infoOGrze = "CZARNY";
+			else if(turn == Stan.WHITE)
+				infoOGrze = "BIA£Y";
+			if(Settled()) System.gc();
+		}
 		
 	}
+
+	@Override
+	public void mouseReleased(MouseEvent e) {
+	}
+}
+
+class ServerGame
+{
 	
-	void serverPlay(Field field, Game game, JFrame frame)
+	void serverPlay(Field field, JFrame frame)
 	{
 	    frame.setVisible(true);
 		System.out.println("Coming soon");
-		frame.setVisible(false);
 		System.gc();
 	}
 }
 
 public class Reversi {
-	static Field pole = new Field();
-	static Game gra = new Game();
-	static Gameplay rozgrywka = new Gameplay();
+	static ServerGame multiplayer = new ServerGame();
 	
 	static void initFrame(JFrame frame) {
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-	    frame.setBounds(10,10, 256, 300);
-	    frame.add(pole);
+	    frame.setBounds(10,10, 246, 289);
+	    frame.setResizable(false);
 	}
 	
 	public static void main(String[] args){
@@ -430,14 +455,18 @@ public class Reversi {
 			System.out.println("Nie ma takiej opcji\nSpróbuj ponownie");
 			choice = begin.nextInt();
 		}
-		JFrame f = new JFrame();
+		JFrame f = new JFrame("Reversi");
+		initFrame(f);
+		Field pole = new Field(f);
 		if(choice == 1) {
-			initFrame(f);
-			rozgrywka.hotSeat(pole, gra, f);
+		    f.add(pole);
+			pole.turn = Stan.BLACK;
+			pole.infoOGrze = "CZARNY";
+		    f.setVisible(true);
 		}
 		else {
-			initFrame(f);
-			rozgrywka.serverPlay(pole, gra, f);
+		    f.add(pole);
+			multiplayer.serverPlay(pole, f);
 		}
 		begin.close();
 	}
