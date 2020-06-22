@@ -1,7 +1,6 @@
 package Reversi.Singleplayer;
 
-import Reversi.Singleplayer.Game;
-import Reversi.Enums.Field;
+import Reversi.Enums.ReversiColor;
 import Reversi.Menu;
 
 import java.awt.*;
@@ -75,7 +74,7 @@ public class SingleGameOver extends JPanel implements ActionListener{
 		JFrame extFrame = new JFrame();
 		initFrame(extFrame);
 		Game again = new Game(extFrame);
-		again.turn = Field.BLACK;
+		again.turns = ReversiColor.BLACK;
 		again.infoOGrze = "CZARNY";
 		extFrame.add(again);
 		extFrame.setVisible(true);
@@ -84,6 +83,7 @@ public class SingleGameOver extends JPanel implements ActionListener{
 	}
 	
 	void quit() {
+		blackWins = 0; whiteWins = 0; draws = 0;
 		JFrame extFrame = new JFrame();
 		initFrame(extFrame);
 		Menu quit = new Menu(extFrame);

@@ -1,8 +1,5 @@
 package Reversi;
 
-import Reversi.Singleplayer.*;
-import Reversi.Multiplayer.ServerMove;
-
 import javax.imageio.ImageIO;
 import javax.swing.JButton;
 import javax.swing.JFrame;

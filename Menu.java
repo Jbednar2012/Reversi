@@ -1,8 +1,8 @@
 package Reversi;
 
-import Reversi.Singleplayer.*;
-import Reversi.Multiplayer.*;
-import Reversi.Enums.Field;
+import Reversi.Singleplayer.Game;
+import Reversi.Multiplayer.ServerPlayer;
+import Reversi.Enums.ReversiColor;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -56,9 +56,15 @@ public class Menu extends JPanel implements ActionListener{
 	public void actionPerformed(ActionEvent s) {
 		Object source = s.getSource();
 		if(source==singlePButton) {
+			JFrame extFrame = new JFrame();
+			initFrame(extFrame);
+			Game again = new Game(extFrame);
+			again.turns = ReversiColor.BLACK;
+			again.infoOGrze = "CZARNY";
+			extFrame.add(again);
+			extFrame.setVisible(true);
 			frame.setVisible(false);
 			frame.dispose();
-			System.gc();
 		}
 		if(source==multiPButton) {
 			JFrame extFrame = new JFrame();
@@ -72,7 +78,7 @@ public class Menu extends JPanel implements ActionListener{
 		if(source==exitButton) {
 			frame.setVisible(false);
 			frame.dispose();
-			System.gc();
+			System.exit(0);
 		}
 	}
 }

@@ -52,4 +52,8 @@ public class Handler extends Thread {
 	public PrintWriter getWriter() {
 		return out;
 	}
+	
+	public boolean running() {
+		return isRunning;
+	}
 }

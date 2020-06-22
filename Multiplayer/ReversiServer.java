@@ -1,6 +1,5 @@
 package Reversi.Multiplayer;
 
-import Reversi.Enums.*;
 import Reversi.Multiplayer.Server.Server;
 
 public class ReversiServer{
